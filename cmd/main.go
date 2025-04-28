@@ -31,7 +31,7 @@ type DeleteUserRequest struct {
 
 func main() {
 	app := zinc.New()
-	var gormDB *gorm.DB
+	var orm *gorm.DB
 
 	err := app.ConnectDB("sqlite", "./sqlite.db")
 	if err != nil {
@@ -43,12 +43,12 @@ func main() {
 	}
 	log.Println("Connected to SQLite")
 
-	gormDB, err = gorm.Open(sqlite.New(sqlite.Config{Conn: db}), &gorm.Config{})
+	orm, err = gorm.Open(sqlite.New(sqlite.Config{Conn: db}), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to initialize GORM: %v", err)
 	}
 	log.Println("Initialized GORM")
-	err = gormDB.AutoMigrate(&User{})
+	err = orm.AutoMigrate(&User{})
 	if err != nil {
 		log.Fatalf("GORM AutoMigrate failed: %v", err)
 		return
@@ -64,9 +64,9 @@ func main() {
 
 		var result *gorm.DB
 		if includeDeleted == "true" {
-			result = gormDB.Unscoped().Find(&users)
+			result = orm.Unscoped().Find(&users)
 		} else {
-			result = gormDB.Find(&users)
+			result = orm.Find(&users)
 		}
 		if result.Error != nil {
 			return fmt.Errorf("failed to query users: %w", result.Error)
@@ -81,7 +81,7 @@ func main() {
 		}
 
 		user := User{Name: req.Name}
-		result := gormDB.Create(&user)
+		result := orm.Create(&user)
 		if result.Error != nil {
 			return fmt.Errorf("failed to insert user: %w", result.Error)
 		}
@@ -94,10 +94,10 @@ func main() {
 		var user User
 		includeDeleted := c.Query("include_deleted")
 
-		result := gormDB.First(&user, id)
+		result := orm.First(&user, id)
 		if result.Error != nil {
 			if includeDeleted == "true" {
-				result = gormDB.Unscoped().First(&user, id)
+				result = orm.Unscoped().First(&user, id)
 			} else {
 				return fmt.Errorf("failed to find user: %w", result.Error)
 			}
@@ -110,7 +110,7 @@ func main() {
 		id := c.Param("id")
 		var user User
 
-		result := gormDB.First(&user, id)
+		result := orm.First(&user, id)
 		if result.Error != nil {
 			return fmt.Errorf("failed to find user: %w", result.Error)
 		}
@@ -118,7 +118,7 @@ func main() {
 			return c.Status(http.StatusBadRequest).Send("Invalid request body")
 		}
 
-		result = gormDB.Save(&user)
+		result = orm.Save(&user)
 		if result.Error != nil {
 			return fmt.Errorf("failed to update user: %w", result.Error)
 		}
@@ -129,7 +129,7 @@ func main() {
 	users.Delete("/:id", func(c *zinc.Context) error {
 		id := c.Param("id")
 
-		result := gormDB.Model(&User{}).Where("id = ?", id).Update("deleted_at", gorm.DeletedAt{Time: time.Now(), Valid: true})
+		result := orm.Model(&User{}).Where("id = ?", id).Update("deleted_at", gorm.DeletedAt{Time: time.Now(), Valid: true})
 		if result.Error != nil {
 			return fmt.Errorf("failed to delete user: %w", result.Error)
 		}
