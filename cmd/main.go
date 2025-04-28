@@ -11,6 +11,24 @@ import (
 	"gorm.io/gorm"
 )
 
+type User struct {
+	ID        uint           `json:"id" gorm:"primaryKey"`
+	Name      string         `json:"name"`
+	DeletedAt gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+}
+
+type CreateUserRequest struct {
+	Name string `json:"name"`
+}
+
+type UpdateUserRequest struct {
+	Name string `json:"name"`
+}
+
+type DeleteUserRequest struct {
+	DeletedAt gorm.DeletedAt `json:"deleted_at"`
+}
+
 func main() {
 	app := zinc.New()
 	var gormDB *gorm.DB
@@ -19,23 +37,26 @@ func main() {
 	if err != nil {
 		log.Fatalf("Connection failed: %v", err)
 	}
-
 	db := app.GetDB()
 	if db == nil {
 		log.Fatalf("Failed to get *sql.DB connection from Zinc")
 	}
+	log.Println("Connected to SQLite")
 
 	gormDB, err = gorm.Open(sqlite.New(sqlite.Config{Conn: db}), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to initialize GORM: %v", err)
 	}
+	log.Println("Initialized GORM")
 	err = gormDB.AutoMigrate(&User{})
 	if err != nil {
 		log.Fatalf("GORM AutoMigrate failed: %v", err)
 		return
 	}
+	log.Println("Migrated User model")
 
 	users := app.Group("/users")
+	log.Println("Created users group")
 
 	users.Get("/", func(c *zinc.Context) error {
 		var users []User
